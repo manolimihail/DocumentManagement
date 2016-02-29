@@ -15,7 +15,7 @@ import ro.manoli.dm.security.common.SerializeUtils;
  * @author Mihail
  */
 public class KpAbe {
-	public void setup(String pubfile, String mskfile, String[] attrs_univ) throws IOException, ClassNotFoundException {
+	public void setup(String pubFile, String mskFile, String[] attrs_univ) throws IOException, ClassNotFoundException {
 		byte[] pub_byte, msk_byte;
 		PublicParam pub = new PublicParam();
 		MasterKey msk = new MasterKey();
@@ -23,14 +23,14 @@ public class KpAbe {
 
 		/* store gpswabePub into pubfile */
 		pub_byte = SerializeUtils.serializegpswabePub(pub);
-		KpAbeUtils.spitFile(pubfile, pub_byte);
+		KpAbeUtils.spitFile(pubFile, pub_byte);
 
 		/* store gpswabeMsk into mskfile */
 		msk_byte = SerializeUtils.serializegpswabeMsk(msk);
-		KpAbeUtils.spitFile(mskfile, msk_byte);
+		KpAbeUtils.spitFile(mskFile, msk_byte);
 	}
 	
-	public void keygen(String pubfile, String mskfile, String prvfile, 
+	public void keygen(String pubFile, String mskFile, String prvFile, 
 			String policy) throws Exception {
 		PublicParam pub;
 		MasterKey msk;
@@ -38,11 +38,11 @@ public class KpAbe {
 		byte[] pub_byte, msk_byte, prv_byte;
 
 		/* get gpswabePub from pubfile */
-		pub_byte = KpAbeUtils.suckFile(pubfile);
+		pub_byte = KpAbeUtils.suckFile(pubFile);
 		pub = SerializeUtils.unserializegpswabePub(pub_byte);
 
 		/* get gpswabeMsk from mskfile */
-		msk_byte = KpAbeUtils.suckFile(mskfile);
+		msk_byte = KpAbeUtils.suckFile(mskFile);
 		msk = SerializeUtils.unserializegpswabeMsk(pub, msk_byte);
 
 		/*String policy = LangPolicy.parsePolicy(attr_str);*/
@@ -50,11 +50,11 @@ public class KpAbe {
 
 		/* store gpswabePrv into prvfile */
 		prv_byte = SerializeUtils.serializegpswabePrv(prv);
-		KpAbeUtils.spitFile(prvfile, prv_byte);
+		KpAbeUtils.spitFile(prvFile, prv_byte);
 	}
 	
-	public void enc(String pubfile, String inputfile, String[] attrs,
-			String encfile) throws Exception {
+	public void enc(String pubFile, String inputFile, String[] attrs,
+			String encFile) throws Exception {
 		PublicParam pub;
 		CiphertextKey cphKey;
 		Ciphertext cph;
@@ -65,7 +65,7 @@ public class KpAbe {
 		Element m;
 
 		/* get gpswabePub from pubfile */
-		pub_byte = KpAbeUtils.suckFile(pubfile);
+		pub_byte = KpAbeUtils.suckFile(pubFile);
 		pub = SerializeUtils.unserializegpswabePub(pub_byte);
 
 		cphKey = Abe.enc(pub,attrs);
@@ -81,14 +81,14 @@ public class KpAbe {
 		cphBuf = SerializeUtils.gpswabeCphSerialize(cph);
 
 		/* read file to encrypted */
-		plt = KpAbeUtils.suckFile(inputfile);
+		plt = KpAbeUtils.suckFile(inputFile);
 		aesBuf = AESCoder.encrypt(m.toBytes(), plt);
 		// PrintArr("element: ", m.toBytes());
-		KpAbeUtils.writeKpabeFile(encfile, cphBuf, aesBuf);
+		KpAbeUtils.writeKpabeFile(encFile, cphBuf, aesBuf);
 	}
 	
-	public void dec(String pubfile, String prvfile, String encfile,
-			String decfile) throws Exception {
+	public void dec(String pubFile, String prvFile, String encFile,
+			String decFile) throws Exception {
 		byte[] aesBuf, cphBuf;
 		byte[] plt;
 		byte[] prv_byte;
@@ -99,23 +99,23 @@ public class KpAbe {
 		PublicParam pub;
 
 		/* get gpswabePub from pubfile */
-		pub_byte = KpAbeUtils.suckFile(pubfile);
+		pub_byte = KpAbeUtils.suckFile(pubFile);
 		pub = SerializeUtils.unserializegpswabePub(pub_byte);
 
 		/* read ciphertext */
-		tmp = KpAbeUtils.readKpabeFile(encfile);
+		tmp = KpAbeUtils.readKpabeFile(encFile);
 		aesBuf = tmp[0];
 		cphBuf = tmp[1];
 		cph = SerializeUtils.gpswabeCphUnserialize(pub, cphBuf);
 
 		/* get gpswabePrv from prvfile */
-		prv_byte = KpAbeUtils.suckFile(prvfile);
+		prv_byte = KpAbeUtils.suckFile(prvFile);
 		prv = SerializeUtils.unserializegpswabePrv(pub, prv_byte);
 
 		Element m = Abe.dec(pub, prv, cph);
 		if (m != null) {
 			plt = AESCoder.decrypt(m.toBytes(), aesBuf);
-			KpAbeUtils.spitFile(decfile, plt);
+			KpAbeUtils.spitFile(decFile, plt);
 		} else {
 			throw new RuntimeException("Decrypted element is null. Please check the algorithm.");
 		}

@@ -53,10 +53,16 @@ public class LangPolicy {
 		String publicFile = LangPolicy.class.getResource("pubfile.txt").getPath();
 		String mskFile = LangPolicy.class.getResource("mskfile.txt").getPath();
 		String prvFile = LangPolicy.class.getResource("prvfile.txt").getPath();
+		String inputFile = LangPolicy.class.getResource("inputfile.txt").getPath();
+		String encFile = LangPolicy.class.getResource("encryptfile.txt").getPath();
+		String decFile = LangPolicy.class.getResource("decfile.txt").getPath();
 		String policy = "sn:student2 ou:idp title:student 1of2 2of2";
 		try {
 			kpabe.setup(publicFile, mskFile, arr);
 			kpabe.keygen(publicFile, mskFile, prvFile, policy);
+			String[] userAttributes = {"title:student", "userPassword:student2"};
+			kpabe.enc(publicFile, inputFile, userAttributes, encFile);
+			kpabe.dec(publicFile, prvFile, encFile, decFile);
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);
 		} catch (IOException e) {

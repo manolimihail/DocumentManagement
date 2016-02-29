@@ -9,4 +9,13 @@ import it.unisa.dia.gas.jpbc.Element;
 public class PublicParamElement {
 	String attr;
 	Element T;
+	
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append(attr);
+		builder.append(":");
+		builder.append(T);
+		return builder.toString();
+	}
 }

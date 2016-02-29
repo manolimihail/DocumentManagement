@@ -28,4 +28,33 @@ public class AbePolicy {
 	int min_leaves;
 	int attri;
 	List<Integer> satl = new ArrayList<Integer>();
+	
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("k");
+		builder.append("=");
+		builder.append(k);
+		builder.append(", ");
+		builder.append("attr");
+		builder.append("=");
+		builder.append(attr);
+		builder.append(", ");
+		builder.append("D");
+		builder.append("=");
+		builder.append(D);
+		builder.append(", ");
+		builder.append("satisfiable");
+		builder.append("=");
+		builder.append(satisfiable);
+		builder.append(", ");
+		builder.append("min leaves");
+		builder.append("=");
+		builder.append(min_leaves);
+		builder.append(", ");
+		builder.append("attri");
+		builder.append("=");
+		builder.append(attri);
+		return builder.toString();
+	}
 }

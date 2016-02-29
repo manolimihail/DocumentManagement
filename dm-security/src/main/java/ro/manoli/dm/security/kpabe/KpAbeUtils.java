@@ -7,6 +7,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+/**
+ * 
+ * @author Mihail
+ *
+ */
 public class KpAbeUtils {
 
 	/* read byte[] from inputfile */
