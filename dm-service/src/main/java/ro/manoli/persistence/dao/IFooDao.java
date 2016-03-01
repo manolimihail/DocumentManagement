@@ -22,5 +22,4 @@ public interface IFooDao {
     void delete(Foo entity);
 
     void deleteById(long entityId);
-
 }
