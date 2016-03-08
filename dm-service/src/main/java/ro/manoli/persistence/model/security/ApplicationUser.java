@@ -1,12 +1,16 @@
-package ro.manoli.persistence.model.company;
+package ro.manoli.persistence.model.security;
 
-import javax.persistence.DiscriminatorValue;
+import java.util.Collection;
+
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
-import ro.manoli.persistence.model.security.User;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+
+import ro.manoli.persistence.model.company.Department;
 
 /**
  * 
@@ -15,9 +19,12 @@ import ro.manoli.persistence.model.security.User;
  */
 @Entity
 @Table(name = "APP_USER")
-@DiscriminatorValue("1")
 public class ApplicationUser extends User {
 	private static final long serialVersionUID = 1L;
+
+	public ApplicationUser(String username, String password, Collection<? extends GrantedAuthority> authorities) {
+		super(username, password, authorities);
+	}
 	
 	private Department department;
 

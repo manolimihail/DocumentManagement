@@ -1,6 +1,14 @@
 package ro.manoli.persistence.model.localization;
 
+import java.util.List;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 import ro.manoli.persistence.model.PersistableEntity;
@@ -18,4 +26,41 @@ public class County extends PersistableEntity {
 	private String name;
 	private String shortName;
 	private Country country;
+	private List<County> counties;
+	
+	@Column(name = "NAME")
+	public String getName() {
+		return name;
+	}
+	
+	public void setName(String name) {
+		this.name = name;
+	}
+	
+	@Column(name = "SHORT_NAME")
+	public String getShortName() {
+		return shortName;
+	}
+	
+	public void setShortName(String shortName) {
+		this.shortName = shortName;
+	}
+	
+	@ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	@JoinColumn(name = "FK_COUNTRY")
+	public Country getCountry() {
+		return country;
+	}
+	
+	public void setCountry(Country country) {
+		this.country = country;
+	}
+	
+	@OneToMany(mappedBy = "county")
+	public List<County> getCounties() {
+		return counties;
+	}
+	public void setCounties(List<County> counties) {
+		this.counties = counties;
+	}
 }

@@ -4,6 +4,8 @@ import java.util.Calendar;
 import java.util.List;
 
 import javax.persistence.Column;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.OneToMany;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -71,6 +73,7 @@ public class Dossier extends PersistableEntity {
 		this.documents = documents;
 	}
 	
+	@Enumerated(EnumType.ORDINAL)
 	public DossierState getState() {
 		return state;
 	}
