@@ -1,6 +1,6 @@
 package ro.manoli.dm.security.common;
 
-import it.unisa.dia.gas.jpbc.Element;
+import java.math.BigInteger;
 
 /**
  * 
@@ -9,8 +9,13 @@ import it.unisa.dia.gas.jpbc.Element;
  */
 public class MasterKeyElement {
 	String attr;
-	Element t;
+	BigInteger t;
 	
+	public MasterKeyElement(BigInteger ti, String attribute) {
+		this.attr = attribute;
+		this.t = ti;
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();

@@ -1,16 +1,22 @@
 package ro.manoli.dm.security.common;
 
+import java.math.BigInteger;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Pairing;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
+import it.unisa.dia.gas.plaf.jpbc.util.math.BigIntegerUtils;
 
 /**
  * 
@@ -36,54 +42,68 @@ public class Abe {
 	 * @return				none.
 	 */
 
-	public static void setup(PublicParam publicParams, MasterKey masterKey, String[] attrs) {
-		Element tmp;
-		publicParams.pairingDesc = curveParams; 
+	public static void setup(PublicKey publicKey, MasterKey masterKey, String[] attrs, BigInteger p, Element g) {
 		URL propertiesFileURL = Abe.class.getResource("a.properties");
-		publicParams.p = PairingFactory.getPairing(propertiesFileURL.getPath());
-		Pairing pairing = publicParams.p;
+		Pairing e = PairingFactory.getPairing(propertiesFileURL.getPath());
+		publicKey.e = e;
 		
-		publicParams.g = pairing.getG1().newElement();
-		tmp = pairing.getG1().newElement();
-		publicParams.Y = pairing.getGT().newElement();
-		masterKey.y = pairing.getZr().newElement();
-	
-		publicParams.comps = new ArrayList<PublicParamElement>();
-		masterKey.comps = new ArrayList<MasterKeyElement>();
+		masterKey.y = BigIntegerUtils.getRandom(p).mod(p);
+		masterKey.t = new ArrayList<MasterKeyElement>();
+		masterKey.g = g;
+		masterKey.p = p;
 		
-		masterKey.y.setToRandom();
-		publicParams.g.setToRandom();
+		publicKey.T = new ArrayList<Ti>();
+		publicKey.p = p;
+		publicKey.g = g;
 		
-		tmp = publicParams.g.duplicate();
-		tmp.powZn(masterKey.y);
-		
-		publicParams.Y = pairing.pairing(publicParams.g, tmp);
 		for (int i = 0; i < attrs.length; i++) {
-			PublicParamElement publicTa = new PublicParamElement();
-			MasterKeyElement mskTa = new MasterKeyElement();
-			publicTa.attr = attrs[i];
-			mskTa.attr = publicTa.attr;
+			// computing master key t1, t2, t3... from Zp
+			BigInteger ti = BigIntegerUtils.getRandom(p).mod(p);
+			masterKey.t.add(new MasterKeyElement(ti, attrs[i]));
 			
-			mskTa.t = pairing.getZr().newElement();
-			publicTa.T = pairing.getG1().newElement();
-			mskTa.t.setToRandom();
-			publicTa.T = publicParams.g.duplicate();
-			(publicTa.T).powZn(mskTa.t);
-			publicParams.comps.add(publicTa);
-			masterKey.comps.add(mskTa);
+			// computing T1, T2, T3 
+			computePK(publicKey, g, ti, attrs[i]);
 		}
+
+		masterKey.y = BigIntegerUtils.getRandom(p).mod(p);
+		publicKey.Y = e.pairing(g, g).pow(masterKey.y);
+	}
+
+	private static void computePK(PublicKey publicParams, Element g, BigInteger t, String attribute) {
+		Ti publicTi = new Ti();
+		publicTi.T_i = g.pow(t);
+		publicTi.attr = attribute;
+		publicParams.T.add(publicTi);
 	}
 	
-	public static PrivateKey keygen(PublicParam pub, MasterKey msk, String policy) throws Exception{
-		PrivateKey prv = new PrivateKey();
-		prv.p = parsePolicyPostfix(policy);
-		if(prv.p == null){
-			System.out.println("Policy cannot be found!");
-			return null;
-		} else {
-			fillPolicy(prv.p, pub, msk, msk.y);
-			return prv;
-		}
+	public static DecryptionKey keygen(AccessTree accessTree, MasterKey masterKey) {
+		DecryptionKey decryptionKey = new DecryptionKey();
+		decryptionKey.dx = new ArrayList<>();
+		
+		accessTree.root.poly = new Polynomial(accessTree.root.threashold - 1, masterKey.p, masterKey.y);
+		Queue<AccessTreeNode> queue = new LinkedList<>();
+		queue.addAll(accessTree.root.children);
+		 while( ! queue.isEmpty()) {
+			 AccessTreeNode node = queue.remove();
+			 BigInteger qx0 = node.parent.computePolynomial(node.index());
+			 node.poly = new Polynomial(node.threashold - 1, masterKey.p, qx0);
+			 
+			 if(node.children != null) {
+				 queue.addAll(node.children);
+			 } else {
+				 BigInteger ti = masterKey.t.stream()
+						 .filter(x -> x.attr.equals(node.attribute))
+						 .map(x -> x.t)
+						 .findFirst()
+						 .get();
+				 ti = ti.modInverse(masterKey.p);
+				 BigInteger exp = node.computePolynomial(BigInteger.ZERO).multiply(ti).mod(masterKey.p);
+				 Element d = masterKey.g.pow(exp);
+				 decryptionKey.dx.add(new SecretShare(d, node.attribute));
+			 }
+		 }
+		 decryptionKey.accessTree = accessTree;
+		 return decryptionKey;
 	}
 	
 	/*!
@@ -176,53 +196,53 @@ public class Abe {
 		return p;
 	}
 
-	/*!
-	 * Routine to fill out the Policy tree
-	 *
-	 * @param P				Pointer to Root node policy data structure
-	 * @param pub			Public key
-	 * @param msk			Master key
-	 * @param e				Root secret
-	 * @return				None
-	 */
-	private static void fillPolicy(AbePolicy p, PublicParam pub, MasterKey msk, Element e)
-			throws NoSuchAlgorithmException {
-		int i;
-		Element r, t, a;
-		Pairing pairing = pub.p;
-		r = pairing.getZr().newElement();
-		t = pairing.getZr().newElement();
-		a = pairing.getZr().newElement();
-
-		p.q = randPoly(p.k - 1, e);
-
-		if (p.children == null || p.children.length == 0) {
-			p.D = pairing.getG1().newElement();
-			
-			for(i=0; i<msk.comps.size();i++){
-				if(msk.comps.get(i).attr.compareTo(p.attr)==0){
-					a=p.q.coef[0].duplicate();
-					a.div(msk.comps.get(i).t);
-					p.D=pub.g.duplicate();
-					p.D.powZn(a);
-					break;
-				}
-				else{
-					if(i==msk.comps.size()-1){
-						System.err.println("Check your attribute universe. Certain attribute not included!");
-						System.exit(0);
-					}
-				}
-			}
-		} else {
-			for (i = 0; i < p.children.length; i++) {
-				r.set(i + 1);
-				evalPoly(t, p.q, r);
-				fillPolicy(p.children[i], pub, msk, t);
-			}
-		}
-
-	}
+//	/*!
+//	 * Routine to fill out the Policy tree
+//	 *
+//	 * @param P				Pointer to Root node policy data structure
+//	 * @param pub			Public key
+//	 * @param msk			Master key
+//	 * @param e				Root secret
+//	 * @return				None
+//	 */
+//	private static void fillPolicy(AbePolicy p, PublicKey pub, MasterKey msk, Element e)
+//			throws NoSuchAlgorithmException {
+//		int i;
+//		Element r, t, a;
+//		Pairing pairing = pub.p;
+//		r = pairing.getZr().newElement();
+//		t = pairing.getZr().newElement();
+//		a = pairing.getZr().newElement();
+//
+//		p.q = randPoly(p.k - 1, e);
+//
+//		if (p.children == null || p.children.length == 0) {
+//			p.D = pairing.getG1().newElement();
+//			
+//			for(i=0; i<msk.t.size();i++){
+//				if(msk.t.get(i).attr.compareTo(p.attr)==0){
+//					a=p.q.coef[0].duplicate();
+//					a.div(msk.t.get(i).t);
+//					p.D=pub.g.duplicate();
+//					p.D.powZn(a);
+//					break;
+//				}
+//				else{
+//					if(i==msk.t.size()-1){
+//						System.err.println("Check your attribute universe. Certain attribute not included!");
+//						System.exit(0);
+//					}
+//				}
+//			}
+//		} else {
+//			for (i = 0; i < p.children.length; i++) {
+//				r.set(i + 1);
+//				evalPoly(t, p.q, r);
+//				fillPolicy(p.children[i], pub, msk, t);
+//			}
+//		}
+//
+//	}
 	
 	/*!
 	 * Compute the constant value of the child node's Lagrange basis polynomial,
@@ -232,7 +252,7 @@ public class Abe {
 	 * @param x				index of this child node in its parent node
 	 * @return				None
 	 */
-	private static void evalPoly(Element r, Polynomial q, Element x) {
+	private static void evalPoly(Element r, Polynomial_ q, Element x) {
 		int i;
 		Element s, t;
 
@@ -262,9 +282,9 @@ public class Abe {
 	 * @return				Lagrange basis polynomial data structure
 	 */
 
-	private static Polynomial randPoly(int deg, Element zeroVal) {
+	private static Polynomial_ randPoly(int deg, Element zeroVal) {
 		int i;
-		Polynomial q = new Polynomial();
+		Polynomial_ q = new Polynomial_();
 		q.deg = deg;
 		q.coef = new Element[deg + 1];
 
@@ -294,308 +314,316 @@ public class Abe {
 	 * @param attributes	Attributes list
 	 * @return				Ciphertext structure
 	 */
-	public static Ciphertext enc(PublicParam pub,Element m, String[] attrs)throws Exception{
-		Ciphertext cph=new Ciphertext();
-		Element s;
-		int i;
-		//initialize
-		Pairing pairing=pub.p;
-		s=pairing.getZr().newElement();
-		m=pairing.getGT().newElement();
-		cph.Ep=pairing.getGT().newElement();
-		//compute
-		m.setToRandom();
-		s.setToRandom();
-		cph.Ep=pub.Y.duplicate();
-		cph.Ep.powZn(s);
-		cph.Ep.mul(m);
-		cph.comps=new ArrayList<CipertextElement>();
-		int len=attrs.length;
-		for (i=0;i<len;i++){
-			CipertextElement c=new CipertextElement();
-			c.attr=attrs[i];
-			c.E=pairing.getG1().newElement();
-			for (int j=0;j<pub.comps.size(); j++){
-				String pubAttr=pub.comps.get(j).attr;
-				if (pubAttr.compareTo(c.attr)==0){
-					c.E=pub.comps.get(j).T.duplicate();
-					c.E.powZn(s);
-					break;
-				}
-				else{
-					if(j==(pub.comps.size()-1)){
-						System.out.println("Check your attribute universe. Certain attribute is not included.");
-						System.exit(0);
-					}
-				}
+	public static Ciphertext enc(PublicKey publicKey, Element message, String[] attributes) {
+		Ciphertext ciphertext = new Ciphertext();
+		ciphertext.attributes.addAll(Arrays.asList(attributes));
+		BigInteger s = publicKey.getRandomElement();
+		Element yPows = publicKey.Y.pow(s);
+		ciphertext.Ep = message.mul(yPows);
+
+		List<String> attrList = Arrays.asList(attributes);
+		for(Ti ti : publicKey.T) {
+			if(attrList.contains(ti.attr)) {
+				ciphertext.comps.add(new CiphertextElement(ti.T_i.pow(s), ti.attr));
 			}
-			cph.comps.add(c);
 		}
-		return cph;
+		
+		return ciphertext;
 	}
 	
 	/*
 	 * Pick a random group element and encrypt it under the attributes
 	 * The resulting ciphertext is return and the Element given as an argument.
 	 */
-	public static CiphertextKey enc(PublicParam publicParams, String[] attrs) throws Exception {
-		CiphertextKey cphKey = new CiphertextKey();
-		Ciphertext cph = new Ciphertext();
-		//initialize
-		Pairing pairing = publicParams.p;
-		Element s = pairing.getZr().newElement();
-		Element m = pairing.getGT().newElement();
-		cph.Ep = pairing.getGT().newElement();
-		//compute
-		m.setToRandom();
-		s.setToRandom();
-		Element duplicate = publicParams.Y.duplicate();
-		cph.Ep = duplicate.powZn(s);
-		cph.Ep = cph.Ep.mul(m);
-		cph.comps = new ArrayList<CipertextElement>();
-		for (int i = 0; i < attrs.length; i++) {
-			CipertextElement c = new CipertextElement();
-			c.attr = attrs[i];
-			c.E = pairing.getG1().newElement();
-			boolean found = false;
-			for (int j = 0; j < publicParams.comps.size(); j++){
-				String pubAttr = publicParams.comps.get(j).attr;
-				if (pubAttr.compareTo(c.attr) == 0) {
-					Element dupl = publicParams.comps.get(j).T.duplicate();
-					c.E = dupl.powZn(s);
-					found = true;
-					break;
-				}
-			}
-			if( ! found) {
-				System.out.println("Check your attribute universe. Certain attribute is not included.");
-			}
-			cph.comps.add(c);
-		}
-		cphKey.cph = cph;
-		cphKey.key = m; /*used for AES encryption*/
-		return cphKey;
+//	public static CiphertextKey enc(PublicKey publicParams, String[] attrs) throws Exception {
+//		CiphertextKey cphKey = new CiphertextKey();
+//		Ciphertext cph = new Ciphertext();
+//		//initialize
+//		Pairing pairing = publicParams.p;
+//		Element s = pairing.getZr().newElement();
+//		Element m = pairing.getGT().newElement();
+//		cph.Ep = pairing.getGT().newElement();
+//		//compute
+//		m.setToRandom();
+//		s.setToRandom();
+//		Element duplicate = publicParams.Y.duplicate();
+//		cph.Ep = duplicate.powZn(s);
+//		cph.Ep = cph.Ep.mul(m);
+//		cph.comps = new ArrayList<CiphertextElement>();
+//		for (int i = 0; i < attrs.length; i++) {
+//			CiphertextElement c = new CiphertextElement();
+//			c.attr = attrs[i];
+//			c.E = pairing.getG1().newElement();
+//			boolean found = false;
+//			for (int j = 0; j < publicParams.comps.size(); j++){
+//				String pubAttr = publicParams.comps.get(j).attr;
+//				if (pubAttr.compareTo(c.attr) == 0) {
+//					Element dupl = publicParams.comps.get(j).T.duplicate();
+//					c.E = dupl.powZn(s);
+//					found = true;
+//					break;
+//				}
+//			}
+//			if( ! found) {
+//				System.out.println("Check your attribute universe. Certain attribute is not included.");
+//			}
+//			cph.comps.add(c);
+//		}
+//		cphKey.cph = cph;
+//		cphKey.key = m; /*used for AES encryption*/
+//		return cphKey;
+//	}
+	
+//	/*!
+//	 * Check whether the attributes in the ciphertext data structure can
+//	 * access the root secret in the policy data structure, and mark all
+//	 * possible path
+//	 *
+//	 * @param p				Policy node data structure (root)
+//	 * @param cph			Ciphertext data structure
+//	 * @param oub			Public key data structure
+//	 * @return				None
+//	 */
+//	private static void checkSatisfy(AbePolicy p, Ciphertext cph, PublicKey pub) {
+//		int i, l;
+//		String cphAttr;
+//		String pubAttr;
+//
+//		p.satisfiable = false;
+//		if (p.children == null || p.children.length == 0) {
+//			for (i = 0; i < cph.comps.size(); i++) {
+//				cphAttr = cph.comps.get(i).attr;
+//				// System.out.println("cphAttr:" + cphAttr);
+//				// System.out.println("p.attr" + p.attr);
+//				if (cphAttr.compareTo(p.attr) == 0) {
+//					// System.out.println("=satisfy=");
+//					p.satisfiable = true;
+//					p.attri = i;
+//					break;
+//				}
+//			}
+//			for(i=0;i<pub.comps.size();i++){
+//				pubAttr=pub.comps.get(i).attr;
+//				if(pubAttr.compareTo(p.attr)==0){
+//					break;
+//				}
+//				else{
+//					if(i==pub.comps.size()-1){
+//						System.out.println("Check your attribute universe. Certain attribute is not included!");
+//						break;
+//					}
+//				}
+//			}
+//		} else {
+//			for (i = 0; i < p.children.length; i++)
+//				checkSatisfy(p.children[i], cph, pub);
+//
+//			l = 0;
+//			for (i = 0; i < p.children.length; i++)
+//				if (p.children[i].satisfiable)
+//					l++;
+//
+//			if (l >= p.k)
+//				p.satisfiable = true;
+//		}
+//	}
+//	
+//	/*!
+//	 * Choose the path with minimal leaves node from all possible path which are marked as satisfiable
+//	 * Mark the respective "min_leaves" element in the policy node data structure
+//	 *
+//	 * @param p				Policy node data structure (root)
+//	 * @return				None
+//	 */
+//	private static void pickSatisfyMinLeaves(AbePolicy p) {
+//		int i, k, l, c_i;
+//		int len;
+//		List<Integer> c = new ArrayList<Integer>();
+//
+//		assert(p.satisfiable);
+//		if (p.children == null || p.children.length == 0)
+//			p.min_leaves = 1;
+//		else {
+//			len = p.children.length;
+//			for (i = 0; i < len; i++)
+//				if (p.children[i].satisfiable)
+//					pickSatisfyMinLeaves(p.children[i]);
+//
+//			for (i = 0; i < len; i++)
+//				c.add(i);
+//
+//			Collections.sort(c, new IntegerComparator(p));
+//
+//			p.satl = new ArrayList<Integer>();
+//			p.min_leaves = 0;
+//			l = 0;
+//
+//			for (i = 0; i < len && l < p.k; i++) {
+//				c_i = c.get(i).intValue(); /* c[i] */
+//				if (p.children[c_i].satisfiable) {
+//					l++;
+//					p.min_leaves += p.children[c_i].min_leaves;
+//					k = c_i + 1;
+//					p.satl.add(k);
+//				}
+//			}
+//			assert(l==p.k);
+//		}
+//	}
+//	
+//	/*!
+//	 * Compute Lagrange coefficient
+//	 *
+//	 * @param r				Lagrange coefficient
+//	 * @param s				satisfiable node set
+//	 * @param i				index of this node in the satisfiable node set
+//	 * @return				None
+//	 */
+//	private static void lagrangeCoef(Element r, List<Integer> s, int i) {
+//		int j, k;
+//		Element t;
+//
+//		t = r.duplicate();
+//
+//		r.setToOne();
+//		for (k = 0; k < s.size(); k++) {
+//			j = s.get(k).intValue();
+//			if (j == i)
+//				continue;
+//			t.set(-j);
+//			r.mul(t); /* num_muls++; */
+//			t.set(i - j);
+//			t.invert();
+//			r.mul(t); /* num_muls++; */
+//		}
+//	}
+//	
+//	/*!
+//	 * DecryptNode algorithm for root secret
+//	 *
+//	 * @param r				Root secret
+//	 * @param p				Policy node dtat structure(root)
+//	 * @param cph			Ciphertext data structure
+//	 * @param pub			Public key data structure
+//	 * @return				None
+//	 */
+//	private static void decFlatten(Element r, AbePolicy p, Ciphertext cph,
+//			PublicKey pub) {
+//		Element one;
+//		one = pub.p.getZr().newElement();
+//		one.setToOne();
+//		r.setToOne();
+//
+//		decNodeFlatten(r, one, p, cph, pub);
+//	}
+//
+//	
+//	private static void decNodeFlatten(Element r, Element exp, AbePolicy p,
+//			Ciphertext cph, PublicKey pub) {
+//		assert(p.satisfiable);
+//		if (p.children == null || p.children.length == 0)
+//			decLeafFlatten(r, exp, p, cph, pub);
+//		else
+//			decInternalFlatten(r, exp, p, cph, pub);
+//	}
+//
+//	private static void decLeafFlatten(Element r, Element exp, AbePolicy p,
+//			Ciphertext cph, PublicKey pub) {
+//		CiphertextElement c;
+//		Element s;
+//
+//		c = cph.comps.get(p.attri);
+//
+//		s = pub.p.getGT().newElement();
+//
+//		s = pub.p.pairing(p.D, c.E); /* num_pairings++; */
+//		s.powZn(exp); /*num_exps++;*/
+//		r.mul(s); /*num_muls++;*/
+//	}
+//
+//	private static void decInternalFlatten(Element r, Element exp,
+//			AbePolicy p, Ciphertext cph, PublicKey pub) {
+//		int i;
+//		Element t, expnew;
+//
+//		t = pub.p.getZr().newElement();
+//		expnew = pub.p.getZr().newElement();
+//
+//		for (i = 0; i < p.satl.size(); i++) {
+//			lagrangeCoef(t, p.satl, (p.satl.get(i)).intValue());
+//			expnew = exp.duplicate();
+//			expnew.mul(t);
+//			decNodeFlatten(r, expnew, p.children[p.satl.get(i)-1],cph, pub);
+//		}
+//	}
+
+	
+	public static Element dec(DecryptionKey D, Ciphertext E, PublicKey publicKey) {
+		return decryptNode(D.accessTree.root, D, E, publicKey);
 	}
 	
-	/*!
-	 * Check whether the attributes in the ciphertext data structure can
-	 * access the root secret in the policy data structure, and mark all
-	 * possible path
-	 *
-	 * @param p				Policy node data structure (root)
-	 * @param cph			Ciphertext data structure
-	 * @param oub			Public key data structure
-	 * @return				None
-	 */
-	private static void checkSatisfy(AbePolicy p, Ciphertext cph, PublicParam pub) {
-		int i, l;
-		String cphAttr;
-		String pubAttr;
-
-		p.satisfiable = false;
-		if (p.children == null || p.children.length == 0) {
-			for (i = 0; i < cph.comps.size(); i++) {
-				cphAttr = cph.comps.get(i).attr;
-				// System.out.println("cphAttr:" + cphAttr);
-				// System.out.println("p.attr" + p.attr);
-				if (cphAttr.compareTo(p.attr) == 0) {
-					// System.out.println("=satisfy=");
-					p.satisfiable = true;
-					p.attri = i;
-					break;
-				}
+	private static Element decryptNode(AccessTreeNode node, DecryptionKey D, Ciphertext E, PublicKey publicKey) {
+		if(node.isChild) {
+			if(E.attributes.contains(node.attribute))
+				return publicKey.e.pairing(D.getDxByAttribute(node.attribute), E.getExByAttribute(node.attribute));
+			else
+				return null;
+		} else {
+			Map<Integer, Element> fz = new HashMap<>();
+			Map<Integer, BigInteger> sxP = new HashMap<>();
+			Integer i = 0;
+			List<Integer> sx = new ArrayList<>();
+			for(AccessTreeNode child : node.children) {
+				sxP.put(i, node.index());
+				fz.put(i, decryptNode(child, D, E, publicKey));
+				sx.add(i);
+				i++;
+				
 			}
-			for(i=0;i<pub.comps.size();i++){
-				pubAttr=pub.comps.get(i).attr;
-				if(pubAttr.compareTo(p.attr)==0){
-					break;
-				}
-				else{
-					if(i==pub.comps.size()-1){
-						System.out.println("Check your attribute universe. Certain attribute is not included!");
+			Collection<List<Integer>> combinationsIds = SetUtils.generateCombinations(sx, node.threashold);
+			for(List<Integer> combination : combinationsIds) {
+				boolean hasValue = true;
+				for(Integer id : combination) {
+					if(fz.get(id) == null) {
+						hasValue = false;
 						break;
 					}
 				}
-			}
-		} else {
-			for (i = 0; i < p.children.length; i++)
-				checkSatisfy(p.children[i], cph, pub);
-
-			l = 0;
-			for (i = 0; i < p.children.length; i++)
-				if (p.children[i].satisfiable)
-					l++;
-
-			if (l >= p.k)
-				p.satisfiable = true;
-		}
-	}
-	
-	/*!
-	 * Choose the path with minimal leaves node from all possible path which are marked as satisfiable
-	 * Mark the respective "min_leaves" element in the policy node data structure
-	 *
-	 * @param p				Policy node data structure (root)
-	 * @return				None
-	 */
-	private static void pickSatisfyMinLeaves(AbePolicy p) {
-		int i, k, l, c_i;
-		int len;
-		List<Integer> c = new ArrayList<Integer>();
-
-		assert(p.satisfiable);
-		if (p.children == null || p.children.length == 0)
-			p.min_leaves = 1;
-		else {
-			len = p.children.length;
-			for (i = 0; i < len; i++)
-				if (p.children[i].satisfiable)
-					pickSatisfyMinLeaves(p.children[i]);
-
-			for (i = 0; i < len; i++)
-				c.add(i);
-
-			Collections.sort(c, new IntegerComparator(p));
-
-			p.satl = new ArrayList<Integer>();
-			p.min_leaves = 0;
-			l = 0;
-
-			for (i = 0; i < len && l < p.k; i++) {
-				c_i = c.get(i).intValue(); /* c[i] */
-				if (p.children[c_i].satisfiable) {
-					l++;
-					p.min_leaves += p.children[c_i].min_leaves;
-					k = c_i + 1;
-					p.satl.add(k);
+				if(hasValue) {
+					Element first = fz.get(combination.get(0));
+					List<BigInteger> s = new ArrayList<>();
+					for(Integer id : combination) {
+						s.add(sxP.get(id));
+					}
+					Element prod = first.pow(LagrangeUtils.computeDelta(BigInteger.ZERO, sxP.get(combination.get(0)), s, publicKey.p));
+					for(int j = 1; j < combination.size(); j++) {
+						prod = prod.mul(fz.get(combination.get(j)).pow(LagrangeUtils.computeDelta(BigInteger.ZERO, sxP.get(combination.get(j)), s, publicKey.p)));
+					}
+					return prod;
 				}
 			}
-			assert(l==p.k);
-		}
-	}
-	
-	/*!
-	 * Compute Lagrange coefficient
-	 *
-	 * @param r				Lagrange coefficient
-	 * @param s				satisfiable node set
-	 * @param i				index of this node in the satisfiable node set
-	 * @return				None
-	 */
-	private static void lagrangeCoef(Element r, List<Integer> s, int i) {
-		int j, k;
-		Element t;
-
-		t = r.duplicate();
-
-		r.setToOne();
-		for (k = 0; k < s.size(); k++) {
-			j = s.get(k).intValue();
-			if (j == i)
-				continue;
-			t.set(-j);
-			r.mul(t); /* num_muls++; */
-			t.set(i - j);
-			t.invert();
-			r.mul(t); /* num_muls++; */
-		}
-	}
-	
-	/*!
-	 * DecryptNode algorithm for root secret
-	 *
-	 * @param r				Root secret
-	 * @param p				Policy node dtat structure(root)
-	 * @param cph			Ciphertext data structure
-	 * @param pub			Public key data structure
-	 * @return				None
-	 */
-	private static void decFlatten(Element r, AbePolicy p, Ciphertext cph,
-			PublicParam pub) {
-		Element one;
-		one = pub.p.getZr().newElement();
-		one.setToOne();
-		r.setToOne();
-
-		decNodeFlatten(r, one, p, cph, pub);
-	}
-
-	
-	private static void decNodeFlatten(Element r, Element exp, AbePolicy p,
-			Ciphertext cph, PublicParam pub) {
-		assert(p.satisfiable);
-		if (p.children == null || p.children.length == 0)
-			decLeafFlatten(r, exp, p, cph, pub);
-		else
-			decInternalFlatten(r, exp, p, cph, pub);
-	}
-
-	private static void decLeafFlatten(Element r, Element exp, AbePolicy p,
-			Ciphertext cph, PublicParam pub) {
-		CipertextElement c;
-		Element s;
-
-		c = cph.comps.get(p.attri);
-
-		s = pub.p.getGT().newElement();
-
-		s = pub.p.pairing(p.D, c.E); /* num_pairings++; */
-		s.powZn(exp); /*num_exps++;*/
-		r.mul(s); /*num_muls++;*/
-	}
-
-	private static void decInternalFlatten(Element r, Element exp,
-			AbePolicy p, Ciphertext cph, PublicParam pub) {
-		int i;
-		Element t, expnew;
-
-		t = pub.p.getZr().newElement();
-		expnew = pub.p.getZr().newElement();
-
-		for (i = 0; i < p.satl.size(); i++) {
-			lagrangeCoef(t, p.satl, (p.satl.get(i)).intValue());
-			expnew = exp.duplicate();
-			expnew.mul(t);
-			decNodeFlatten(r, expnew, p.children[p.satl.get(i)-1],cph, pub);
-		}
-	}
-
-	
-	public static Element dec(PublicParam pub, PrivateKey prv, Ciphertext cph){
-		Element Ys;
-		Element m;
-		Pairing pairing=pub.p;
-		m=pairing.getGT().newElement();
-		Ys=pairing.getGT().newElement();
-		checkSatisfy(prv.p, cph, pub);
-		if(!prv.p.satisfiable){
-			System.out.println("Cannot decrypt.");
-			return null;
-		}
-		pickSatisfyMinLeaves(prv.p);
-		decFlatten(Ys, prv.p, cph, pub);
-		Element tmp=cph.Ep.duplicate();
-		m=tmp.div(Ys);
-		return m;
+		}	
+		return null;
 	}
 	
 	
-	private static class IntegerComparator implements Comparator<Integer> {
-		AbePolicy policy;
-
-		public IntegerComparator(AbePolicy p) {
-			this.policy = p;
-		}
-
-		@Override
-		public int compare(Integer o1, Integer o2) {
-			int k, l;
-
-			k = policy.children[o1.intValue()].min_leaves;
-			l = policy.children[o2.intValue()].min_leaves;
-
-			return	k < l ? -1 : 
-					k == l ? 0 : 1;
-		}
-	}
+	
+//	private static class IntegerComparator implements Comparator<Integer> {
+//		AbePolicy policy;
+//
+//		public IntegerComparator(AbePolicy p) {
+//			this.policy = p;
+//		}
+//
+//		@Override
+//		public int compare(Integer o1, Integer o2) {
+//			int k, l;
+//
+//			k = policy.children[o1.intValue()].min_leaves;
+//			l = policy.children[o2.intValue()].min_leaves;
+//
+//			return	k < l ? -1 : 
+//					k == l ? 0 : 1;
+//		}
+//	}
 }

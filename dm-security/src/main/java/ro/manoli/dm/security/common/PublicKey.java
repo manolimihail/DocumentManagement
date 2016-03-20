@@ -1,21 +1,28 @@
 package ro.manoli.dm.security.common;
 
+import java.math.BigInteger;
 import java.util.List;
 
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Pairing;
+import it.unisa.dia.gas.plaf.jpbc.util.math.BigIntegerUtils;
 
 /**
  * 
  * @author Mihail
  *
  */
-public class PublicParam {
+public class PublicKey {
 	public String pairingDesc;
-	public Pairing p;
+	public BigInteger p;
 	public Element g;
 	public Element Y;
-	public List<PublicParamElement> comps;
+	public List<Ti> T;
+	public Pairing e;
+	
+	public BigInteger getRandomElement() {
+		return BigIntegerUtils.getRandom(p).mod(p);
+	}
 	
 	@Override
 	public String toString() {
@@ -32,7 +39,7 @@ public class PublicParam {
 		builder.append("Y:");
 		builder.append(Y);
 		builder.append(", comps:");
-		builder.append(comps);
+		builder.append(T);
 		return builder.toString();
 	}
 }

@@ -1,23 +1,21 @@
 package ro.manoli.dm.security.common;
-
 import it.unisa.dia.gas.jpbc.Element;
 
 /**
- * Class that models an attribute structure in ciphertext key.
  * 
  * @author Mihail
  *
  */
-public class CipertextElement {
+public class Ti {
 	String attr;
-	Element E; /*G1*/
+	Element T_i;
 	
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append(attr);
 		builder.append(":");
-		builder.append(E);
+		builder.append(T_i);
 		return builder.toString();
 	}
 }

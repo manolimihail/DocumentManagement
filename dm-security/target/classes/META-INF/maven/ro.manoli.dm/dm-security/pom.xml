@@ -15,5 +15,13 @@
   		<groupId>it.unisa.dia.gas.jpbc</groupId>
 		<artifactId>jpbc-plaf</artifactId>
   	</dependency>
+  	<dependency>
+		<groupId>junit</groupId>
+		<artifactId>junit</artifactId>
+	</dependency>
+	<dependency>
+		<groupId>com.google.guava</groupId>
+		<artifactId>guava</artifactId>
+	</dependency>
   </dependencies>
 </project>

@@ -21,7 +21,7 @@ public class AbePolicy {
 	AbePolicy[] children;
 
 	/* only used during encryption */
-	Polynomial q;
+	Polynomial_ q;
 
 	/* only used during decryption */
 	boolean satisfiable;
