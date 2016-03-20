@@ -25,6 +25,7 @@
 		<hibernate.version>5.1.0.Final</hibernate.version>
 		<hamcrest.version>1.3</hamcrest.version>
 		<spring.security.version>4.0.4.RELEASE</spring.security.version>
+		<spring.data.version>1.9.4.RELEASE</spring.data.version>
 	</properties>
 	
 	<dependencyManagement>
@@ -70,6 +71,12 @@
 				<artifactId>spring-security-config</artifactId>
 				<version>${spring.security.version}</version>
 			</dependency>
+			<dependency>
+				<groupId>org.springframework.data</groupId>
+				<artifactId>spring-data-jpa</artifactId>
+				<version>${spring.data.version}</version>
+			</dependency>
+						
 					
 			<!-- Persistence -->
 			<dependency>

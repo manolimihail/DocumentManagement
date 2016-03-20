@@ -26,7 +26,7 @@ public class County extends PersistableEntity {
 	private String name;
 	private String shortName;
 	private Country country;
-	private List<County> counties;
+	private List<City> cities;
 	
 	@Column(name = "NAME")
 	public String getName() {
@@ -57,10 +57,11 @@ public class County extends PersistableEntity {
 	}
 	
 	@OneToMany(mappedBy = "county")
-	public List<County> getCounties() {
-		return counties;
+	public List<City> getCities() {
+		return cities;
 	}
-	public void setCounties(List<County> counties) {
-		this.counties = counties;
+	
+	public void setCities(List<City> cities) {
+		this.cities = cities;
 	}
 }

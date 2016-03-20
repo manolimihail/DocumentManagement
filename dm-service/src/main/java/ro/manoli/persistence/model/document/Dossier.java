@@ -4,9 +4,11 @@ import java.util.Calendar;
 import java.util.List;
 
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.OneToMany;
+import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
@@ -17,6 +19,8 @@ import ro.manoli.persistence.model.PersistableEntity;
  * @author Mihail
  *
  */
+@Entity
+@Table(name = "DOSSIER")
 public class Dossier extends PersistableEntity {
 	private static final long serialVersionUID = 1L;
 	
