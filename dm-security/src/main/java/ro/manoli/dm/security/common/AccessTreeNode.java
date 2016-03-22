@@ -14,21 +14,20 @@ public class AccessTreeNode {
 	Polynomial poly;
 	AccessTreeNode parent;
 	
-	public AccessTreeNode(String attr) {
+	public AccessTreeNode(String attr, Long num) {
 		this.isChild = true;
 		this.attribute = attr;
+		this.num = new BigInteger(num.toString());
 	}
 	
-	public AccessTreeNode(int threashold, AccessTreeNode... nodes) {
+	public AccessTreeNode(int threashold, Long num, AccessTreeNode... nodes) {
 		isParent = true;
 		children = new ArrayList<>();
-		BigInteger numbering = BigInteger.ONE;
 		for(AccessTreeNode child : nodes) {
 			child.parent = this;
-			child.num = numbering;
 			children.add(child);
-			numbering = numbering.add(BigInteger.ONE);
 		}
+		this.num = new BigInteger(num.toString());
 		this.threashold = threashold;
 	}
 

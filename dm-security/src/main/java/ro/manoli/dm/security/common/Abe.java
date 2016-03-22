@@ -86,11 +86,12 @@ public class Abe {
 		 while( ! queue.isEmpty()) {
 			 AccessTreeNode node = queue.remove();
 			 BigInteger qx0 = node.parent.computePolynomial(node.index());
-			 node.poly = new Polynomial(node.threashold - 1, masterKey.p, qx0);
 			 
 			 if(node.children != null) {
+				 node.poly = new Polynomial(node.threashold - 1, masterKey.p, qx0);
 				 queue.addAll(node.children);
 			 } else {
+				 node.poly = new Polynomial(0, masterKey.p, qx0);
 				 BigInteger ti = masterKey.t.stream()
 						 .filter(x -> x.attr.equals(node.attribute))
 						 .map(x -> x.t)

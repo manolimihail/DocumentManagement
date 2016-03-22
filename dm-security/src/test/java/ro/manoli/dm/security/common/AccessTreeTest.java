@@ -16,16 +16,16 @@ public class AccessTreeTest {
 	
 	@Before
 	public void populateAccessTree() {
-		AccessTreeNode n1 = new AccessTreeNode("1");
-		AccessTreeNode n2 = new AccessTreeNode("2");
-		AccessTreeNode n3 = new AccessTreeNode("3");
-		AccessTreeNode n4 = new AccessTreeNode("4");
-		AccessTreeNode n5 = new AccessTreeNode("5");
+		AccessTreeNode n1 = new AccessTreeNode("1", 4L);
+		AccessTreeNode n2 = new AccessTreeNode("2", 5L);
+		AccessTreeNode n3 = new AccessTreeNode("3", 6L);
+		AccessTreeNode n4 = new AccessTreeNode("4", 7L);
+		AccessTreeNode n5 = new AccessTreeNode("5", 8L);
 		
-		AccessTreeNode r1 = new AccessTreeNode(2, n1, n2, n3);
-		AccessTreeNode r2 = new AccessTreeNode(1, n4, n5);
+		AccessTreeNode r1 = new AccessTreeNode(2, 2L, n1, n2, n3);
+		AccessTreeNode r2 = new AccessTreeNode(1, 3L, n4, n5);
 
-		AccessTreeNode root = new AccessTreeNode(2, r1, r2);
+		AccessTreeNode root = new AccessTreeNode(2, 1L, r1, r2);
 		
 		accessTree = new AccessTree(root);
 	}
