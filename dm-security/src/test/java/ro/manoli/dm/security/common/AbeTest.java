@@ -32,10 +32,11 @@ public class AbeTest {
 	public void init() {
 		publicKey = new PublicKey();
 		Random rnd = new Random();
-		p = BigInteger.probablePrime(256, rnd);
-		URL propertiesFileURL = Abe.class.getResource("a.properties");
+//		p = BigInteger.probablePrime(256, rnd);
+		p = new BigInteger("427211363219");
+		URL propertiesFileURL = Abe.class.getResource("testValues.properties");
 		Pairing e = PairingFactory.getPairing(propertiesFileURL.getPath());
-		g = e.getG1().newElement(); 
+		g = e.getG1().newElement();
 	
 		message = e.getGT().newElement();
 		masterKey = new MasterKey();
@@ -84,5 +85,10 @@ public class AbeTest {
 		Ciphertext ciphertext = Abe.enc(publicKey, message, attributes);
 		DecryptionKey decryptionKey = Abe.keygen(accessTree, masterKey);
 		Abe.dec(decryptionKey, ciphertext, publicKey);
+	}
+	
+	@Test
+	public void testSetup() {
+		Abe.setup(publicKey, masterKey, attributes, p, g);
 	}
 }

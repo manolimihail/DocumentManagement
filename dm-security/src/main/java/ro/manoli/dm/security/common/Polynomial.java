@@ -18,7 +18,8 @@ public class Polynomial {
 		coeficient[0] = qx0;
 		if(this.degree > 0) {
 			for(int i = 1; i <= degree; i++) {
-				coeficient[i] = BigIntegerUtils.getRandom(p).mod(p);
+//				coeficient[i] = BigIntegerUtils.getRandom(p).mod(p);
+				coeficient[i] = new BigInteger("3");
 			}
 		}
 	}

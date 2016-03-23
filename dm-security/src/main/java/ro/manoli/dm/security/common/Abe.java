@@ -43,11 +43,11 @@ public class Abe {
 	 */
 
 	public static void setup(PublicKey publicKey, MasterKey masterKey, String[] attrs, BigInteger p, Element g) {
-		URL propertiesFileURL = Abe.class.getResource("a.properties");
+		URL propertiesFileURL = Abe.class.getResource("testValues.properties");
 		Pairing e = PairingFactory.getPairing(propertiesFileURL.getPath());
 		publicKey.e = e;
 		
-		masterKey.y = BigIntegerUtils.getRandom(p).mod(p);
+//		masterKey.y = BigIntegerUtils.getRandom(p).mod(p);
 		masterKey.t = new ArrayList<MasterKeyElement>();
 		masterKey.g = g;
 		masterKey.p = p;
@@ -55,17 +55,23 @@ public class Abe {
 		publicKey.T = new ArrayList<Ti>();
 		publicKey.p = p;
 		publicKey.g = g;
-		
+		BigInteger[] pseudoRandom = new BigInteger[] {
+				new BigInteger("5"),
+				new BigInteger("3"),
+				new BigInteger("6")
+				}; 
 		for (int i = 0; i < attrs.length; i++) {
 			// computing master key t1, t2, t3... from Zp
-			BigInteger ti = BigIntegerUtils.getRandom(p).mod(p);
+//			BigInteger ti = BigIntegerUtils.getRandom(p).mod(p);
+			BigInteger ti = pseudoRandom[i];
 			masterKey.t.add(new MasterKeyElement(ti, attrs[i]));
 			
 			// computing T1, T2, T3 
 			computePK(publicKey, g, ti, attrs[i]);
 		}
 
-		masterKey.y = BigIntegerUtils.getRandom(p).mod(p);
+//		masterKey.y = BigIntegerUtils.getRandom(p).mod(p);
+		masterKey.y = new BigInteger("7");
 		publicKey.Y = e.pairing(g, g).pow(masterKey.y);
 	}
 

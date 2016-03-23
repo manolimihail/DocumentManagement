@@ -21,7 +21,8 @@ public class PublicKey {
 	public Pairing e;
 	
 	public BigInteger getRandomElement() {
-		return BigIntegerUtils.getRandom(p).mod(p);
+//		return BigIntegerUtils.getRandom(p).mod(p);
+		return new BigInteger("3");
 	}
 	
 	@Override
