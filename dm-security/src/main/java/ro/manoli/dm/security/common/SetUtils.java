@@ -12,6 +12,12 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
+/**
+ * 
+ * @author Mihail
+ *
+ * @param <T>
+ */
 public class SetUtils<T> {
 	public Collection<List<T>> permutations(List<T> list, int size) {
 		Collection<List<T>> all = Lists.newArrayList();

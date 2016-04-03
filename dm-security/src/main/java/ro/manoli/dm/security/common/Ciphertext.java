@@ -4,7 +4,11 @@ import java.util.List;
 
 import it.unisa.dia.gas.jpbc.Element;
 
-/* A ciphertext*/
+/**
+ * 
+ * @author Mihail
+ *
+ */
 public class Ciphertext {
 	Element Ep;
 	List<CiphertextElement> comps;

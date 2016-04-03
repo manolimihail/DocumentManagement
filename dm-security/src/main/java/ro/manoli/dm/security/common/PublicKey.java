@@ -2,10 +2,10 @@ package ro.manoli.dm.security.common;
 
 import java.math.BigInteger;
 import java.util.List;
+import java.util.Random;
 
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Pairing;
-import it.unisa.dia.gas.plaf.jpbc.util.math.BigIntegerUtils;
 
 /**
  * 
@@ -20,9 +20,10 @@ public class PublicKey {
 	public List<Ti> T;
 	public Pairing e;
 	
+	private Random random = new Random();
+	
 	public BigInteger getRandomElement() {
-//		return BigIntegerUtils.getRandom(p).mod(p);
-		return new BigInteger("3");
+		return BigInteger.probablePrime(256, random);
 	}
 	
 	@Override

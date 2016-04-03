@@ -2,6 +2,11 @@ package ro.manoli.dm.security.common;
 
 import java.util.List;
 
+/**
+ * 
+ * @author Mihail
+ *
+ */
 public class AccessTree {
 	AccessTreeNode root;
 

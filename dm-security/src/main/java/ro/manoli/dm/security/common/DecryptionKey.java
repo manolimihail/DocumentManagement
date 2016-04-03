@@ -4,6 +4,11 @@ import java.util.List;
 
 import it.unisa.dia.gas.jpbc.Element;
 
+/**
+ * 
+ * @author Mihail
+ *
+ */
 public class DecryptionKey {
 	List<SecretShare> dx;
 	AccessTree accessTree;

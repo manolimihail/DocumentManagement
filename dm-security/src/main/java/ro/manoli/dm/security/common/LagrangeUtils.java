@@ -3,6 +3,11 @@ package ro.manoli.dm.security.common;
 import java.math.BigInteger;
 import java.util.List;
 
+/**
+ * 
+ * @author Mihail
+ *
+ */
 public class LagrangeUtils {
 	
 	public static BigInteger computeDelta(BigInteger x, BigInteger i, List<BigInteger> s, BigInteger p) {

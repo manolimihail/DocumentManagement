@@ -1,14 +1,20 @@
 package ro.manoli.dm.security.common;
 
 import java.math.BigInteger;
+import java.util.Random;
 
-import it.unisa.dia.gas.plaf.jpbc.util.math.BigIntegerUtils;
-
+/**
+ * 
+ * @author Mihail
+ *
+ */
 public class Polynomial {
 	int degree;
 	// a0 * x^0 + a1 * x^1 + ...
 	BigInteger[] coeficient;
 	BigInteger p;
+	
+	private Random random = new Random();
 	
 	public Polynomial(int degree, BigInteger p, BigInteger qx0) {
 		this.degree = degree;
@@ -18,8 +24,7 @@ public class Polynomial {
 		coeficient[0] = qx0;
 		if(this.degree > 0) {
 			for(int i = 1; i <= degree; i++) {
-//				coeficient[i] = BigIntegerUtils.getRandom(p).mod(p);
-				coeficient[i] = new BigInteger("3");
+				coeficient[i] = BigInteger.probablePrime(256, random).mod(p);
 			}
 		}
 	}
